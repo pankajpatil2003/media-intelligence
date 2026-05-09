@@ -48,3 +48,33 @@ async def approve_user(user_id: str, admin: dict = Depends(require_root_admin)):
         raise HTTPException(status_code=404, detail="Operator not found or already processed.")
         
     return {"success": True, "message": "Clearance granted."}
+
+# ==================================================
+# 🔥 Fetch All Active/Approved Users
+# ==================================================
+@router.get("/users")
+async def get_all_users(current_user: dict = Depends(get_current_user)):
+    
+    # 1. Security Check: Ensure only Admins can pull this list
+    if current_user.get("role") != "Root Admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access Denied: Root Admin clearance required."
+        )
+
+    # 2. Query MongoDB for anyone who IS NOT "Pending"
+    users_cursor = users_collection.find({"status": {"$ne": "Pending"}})
+    
+    # 3. Format the data for the React table
+    active_users = []
+    for u in users_cursor:
+        active_users.append({
+            # Format the MongoDB ID into your cool Operator ID style
+            "id": f"OP-{str(u['_id'])[-6:].upper()}", 
+            "name": u.get("name", "Unknown"),
+            "email": u.get("email", ""),
+            "role": u.get("role", "User"),
+            "status": u.get("status", "Active")
+        })
+        
+    return active_users

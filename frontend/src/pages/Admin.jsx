@@ -23,37 +23,40 @@ export default function Admin() {
 
   const [pendingUsers, setPendingUsers] = useState([]);
 
-  // 🔥 Updated to use the real User ID from context
-  const [activeUsers, setActiveUsers] = useState([
-    {
-      id: user?.id ? `OP-${user.id.slice(-6).toUpperCase()}` : "OP-SYSTEM",
-      name: user?.name,
-      email: user?.email,
-      role: user?.role || "Root Admin",
-      status: "Active",
-    },
-  ]);
+  // 🔥 FIXED: Start with an empty array instead of your hardcoded local user!
+  const [activeUsers, setActiveUsers] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   // ==================================================
-  // 🔥 Fetch Real Pending Users on Load
+  // 🔥 Fetch Data on Load
   // ==================================================
   useEffect(() => {
     fetchPendingUsers();
+    fetchActiveUsers(); // 🔥 ADDED: Trigger the directory fetch on load
   }, []);
 
   const fetchPendingUsers = async () => {
     try {
-      // 🔥 Swapped fetch for api.get
       const response = await api.get("/api/v1/admin/pending-users", {
         headers: { Authorization: `Bearer ${token}` }, // Send JWT to prove you are Root Admin
       });
-
-      // Axios auto-parses JSON, so we just grab response.data
       setPendingUsers(response.data);
     } catch (err) {
       console.error("Failed to fetch queue", err);
+    }
+  };
+
+  // 🔥 ADDED: The function to fetch all approved users from the database
+  const fetchActiveUsers = async () => {
+    try {
+      const response = await api.get("/api/v1/admin/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setActiveUsers(response.data);
+    } catch (err) {
+      console.error("Failed to fetch active users directory", err);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +67,6 @@ export default function Admin() {
   // ==================================================
   const handleApprove = async (id) => {
     try {
-      // 🔥 Swapped fetch for api.post
       const response = await api.post(
         `/api/v1/admin/approve-user/${id}`,
         {},
@@ -73,10 +75,11 @@ export default function Admin() {
         },
       );
 
-      // Axios uses response.status for HTTP codes
       if (response.status === 200 || response.status === 201) {
-        // Remove them from the pending UI queue instantly
+        // Remove from pending UI
         setPendingUsers(pendingUsers.filter((u) => u.id !== id));
+        // 🔥 Refresh the active users list so the newly approved person shows up instantly
+        fetchActiveUsers();
       }
     } catch (err) {
       console.error("Failed to approve", err);
@@ -84,7 +87,6 @@ export default function Admin() {
   };
 
   const handleReject = (id) => {
-    // For now, just hide them from UI. You can build a /reject API later!
     setPendingUsers(pendingUsers.filter((u) => u.id !== id));
   };
 
@@ -121,7 +123,7 @@ export default function Admin() {
             </div>
             <div>
               <p className="text-2xl font-bold font-mono">
-                {activeUsers.length || 1}
+                {activeUsers.length || 0}
               </p>
               <p className="text-zinc-500 text-xs font-mono uppercase tracking-widest">
                 Total Personnel
@@ -170,7 +172,7 @@ export default function Admin() {
 
         {/* Horizontal Stack Layout */}
         <div className="flex flex-col gap-8">
-          {/* Clearance Queue - Full Width with Horizontal Cards */}
+          {/* Clearance Queue */}
           <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-inner">
             <h3 className="text-white text-lg font-bold mb-6 flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-orange-500" />
@@ -201,14 +203,14 @@ export default function Admin() {
                           </p>
                         </div>
                         <span className="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-[10px] font-mono text-zinc-400 uppercase">
-                          {request.date}
+                          {request.date || "PENDING"}
                         </span>
                       </div>
                       <div className="mb-6">
                         <p className="text-xs text-zinc-400">
                           Requested:{" "}
                           <span className="text-orange-400 font-mono">
-                            {request.requestedRole}
+                            {request.requestedRole || request.role}
                           </span>
                         </p>
                       </div>
@@ -233,7 +235,7 @@ export default function Admin() {
             )}
           </div>
 
-          {/* Master User Directory - Full Width Table */}
+          {/* Master User Directory */}
           <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h3 className="text-white text-lg font-bold flex items-center gap-2">
@@ -271,41 +273,62 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
-                  {activeUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-zinc-900/30 transition-colors group"
-                    >
-                      <td className="px-6 py-4 font-mono text-zinc-400">
-                        {user.id}
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-white">{user.name}</p>
-                        <p className="text-xs text-zinc-500 font-mono mt-0.5">
-                          {user.email}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-orange-400 font-mono text-xs">
-                        {user.role}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider border ${
-                            user.status === "Active"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : "bg-red-500/10 text-red-400 border-red-500/20"
-                          }`}
-                        >
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-zinc-500 hover:text-white p-1 rounded-md hover:bg-zinc-800 transition-colors">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-6 py-8 text-center text-zinc-500"
+                      >
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                        Fetching Directory...
                       </td>
                     </tr>
-                  ))}
+                  ) : activeUsers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-6 py-8 text-center text-zinc-500"
+                      >
+                        No active operators found.
+                      </td>
+                    </tr>
+                  ) : (
+                    activeUsers.map((user) => (
+                      <tr
+                        key={user.id}
+                        className="hover:bg-zinc-900/30 transition-colors group"
+                      >
+                        <td className="px-6 py-4 font-mono text-zinc-400">
+                          {user.id}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-white">{user.name}</p>
+                          <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                            {user.email}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-orange-400 font-mono text-xs">
+                          {user.role}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-2 py-1 rounded text-[10px] font-mono uppercase tracking-wider border ${
+                              user.status === "Active"
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-red-500/10 text-red-400 border-red-500/20"
+                            }`}
+                          >
+                            {user.status || "Active"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="text-zinc-500 hover:text-white p-1 rounded-md hover:bg-zinc-800 transition-colors">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
