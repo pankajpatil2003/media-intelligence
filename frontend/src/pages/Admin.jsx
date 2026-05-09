@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; // 🔥 Import Auth Context
+import { api } from "../api/axios"; // 🔥 Import the dynamic Axios instance
 import {
   ArrowLeft,
   Users,
@@ -44,16 +45,13 @@ export default function Admin() {
 
   const fetchPendingUsers = async () => {
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/v1/admin/pending-users",
-        {
-          headers: { Authorization: `Bearer ${token}` }, // Send JWT to prove you are Root Admin
-        },
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setPendingUsers(data);
-      }
+      // 🔥 Swapped fetch for api.get
+      const response = await api.get("/api/v1/admin/pending-users", {
+        headers: { Authorization: `Bearer ${token}` }, // Send JWT to prove you are Root Admin
+      });
+
+      // Axios auto-parses JSON, so we just grab response.data
+      setPendingUsers(response.data);
     } catch (err) {
       console.error("Failed to fetch queue", err);
     } finally {
@@ -66,15 +64,17 @@ export default function Admin() {
   // ==================================================
   const handleApprove = async (id) => {
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/v1/admin/approve-user/${id}`,
+      // 🔥 Swapped fetch for api.post
+      const response = await api.post(
+        `/api/v1/admin/approve-user/${id}`,
+        {},
         {
-          method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         },
       );
 
-      if (response.ok) {
+      // Axios uses response.status for HTTP codes
+      if (response.status === 200 || response.status === 201) {
         // Remove them from the pending UI queue instantly
         setPendingUsers(pendingUsers.filter((u) => u.id !== id));
       }

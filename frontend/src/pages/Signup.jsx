@@ -10,6 +10,7 @@ import {
   Loader2,
   CheckCircle,
 } from "lucide-react";
+import { api } from "../api/axios"; // 🔥 Import your dynamic Axios instance
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function Signup() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔥 New state to show the success message instead of logging in
+  // 🔥 State to show the success message instead of logging in
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSignup = async (e) => {
@@ -29,26 +30,24 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/v1/auth/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
-        },
-      );
+      // 🔥 Swapped fetch for api.post
+      await api.post("/api/v1/auth/register", {
+        name,
+        email,
+        password,
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to request access.");
-      }
-
-      // 🔥 Instead of logging in, show the success screen
+      // Axios throws an error automatically if response is not 2xx.
+      // If the code reaches this line, the request was successful!
       setIsSuccess(true);
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      // 🔥 Extract the FastAPI error detail securely
+      const errorMessage =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        "Failed to request access.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

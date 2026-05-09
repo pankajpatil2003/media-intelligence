@@ -9,6 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext"; // 🔥 Import the hook
+import { api } from "../api/axios"; // 🔥 Import your dynamic Axios instance
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,25 +31,24 @@ export default function Login() {
       formData.append("username", email);
       formData.append("password", password);
 
-      const response = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
-        method: "POST",
+      // 🔥 Swapped fetch for api.post
+      const response = await api.post("/api/v1/auth/login", formData, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error("Invalid credentials. Access denied.");
-      }
-
-      const data = await response.json();
+      // Axios auto-parses the JSON response into response.data
+      const data = response.data;
 
       // 🔥 Send the data to your global state which handles localStorage & redirect
       login(data.user, data.access_token);
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      // 🔥 Axios neatly wraps the backend error. Let's try to grab the exact FastAPI detail string!
+      const errorMessage =
+        err.response?.data?.detail || "Invalid credentials. Access denied.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -11,6 +11,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; // 🔥 Import Auth Context
 
+// ==================================================
+// 🔥 Dynamic WebSocket URL Routing
+// ==================================================
+// 1. Grab the exact same URL we use for Axios
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// 2. Intelligently swap http for ws, and https for wss
+const WS_BASE_URL = API_URL.replace(/^http/, "ws");
+
 export default function LiveTranscription() {
   const navigate = useNavigate();
   const { user, token } = useAuth(); // 🔥 Get real user data and JWT token
@@ -58,8 +66,8 @@ export default function LiveTranscription() {
       setRecordingTime(0);
       setStatus("connecting");
 
-      // 🔥 Pass the JWT token securely via URL query parameters
-      const wsUrl = `ws://127.0.0.1:8000/api/v1/live-transcription/ws/transcribe?token=${token}`;
+      // 🔥 Dynamically construct the WebSocket URL using the environment variable
+      const wsUrl = `${WS_BASE_URL}/api/v1/live-transcription/ws/transcribe?token=${token}`;
       const ws = new WebSocket(wsUrl);
 
       websocketRef.current = ws;
@@ -168,8 +176,9 @@ export default function LiveTranscription() {
         </div>
 
         <div className="flex items-center gap-4 text-sm font-mono">
+          {/* 🔥 Dynamically show the actual connected server URL in the UI */}
           <div className="flex items-center gap-2 text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-md border border-zinc-800">
-            <Server className="w-4 h-4" /> ws://127.0.0.1:8000
+            <Server className="w-4 h-4" /> {WS_BASE_URL}
           </div>
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md border ${isRecording ? "bg-orange-500/10 border-orange-500/50 text-orange-400 shadow-[0_0_10px_rgba(234,88,12,0.2)]" : "bg-zinc-900 border-zinc-800 text-zinc-500"}`}
