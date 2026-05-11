@@ -5,6 +5,7 @@ import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import LiveTranscription from "./pages/LiveTranscription";
+import BatchTranscription from "./pages/BatchTranscription"; // 🔥 Import new feature
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
@@ -31,14 +32,27 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* 🔥 Updated path to match dashboard */}
             <Route
-              path="/transcription"
+              path="/live-transcription"
               element={
                 <ProtectedRoute>
                   <LiveTranscription />
                 </ProtectedRoute>
               }
             />
+
+            {/* 🔥 Added new Batch Transcription route */}
+            <Route
+              path="/batch-transcription"
+              element={
+                <ProtectedRoute>
+                  <BatchTranscription />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/profile"
               element={

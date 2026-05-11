@@ -7,21 +7,20 @@ import {
   Activity,
   Server,
   Database,
+  Download, // 🔥 1. Added Download Icon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext"; // 🔥 Import Auth Context
+import { useAuth } from "../context/AuthContext";
 
 // ==================================================
 // 🔥 Dynamic WebSocket URL Routing
 // ==================================================
-// 1. Grab the exact same URL we use for Axios
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-// 2. Intelligently swap http for ws, and https for wss
 const WS_BASE_URL = API_URL.replace(/^http/, "ws");
 
 export default function LiveTranscription() {
   const navigate = useNavigate();
-  const { user, token } = useAuth(); // 🔥 Get real user data and JWT token
+  const { user, token } = useAuth();
 
   const [sessionId, setSessionId] = useState("");
   const [status, setStatus] = useState("idle");
@@ -35,7 +34,6 @@ export default function LiveTranscription() {
   const streamRef = useRef(null);
   const timerRef = useRef(null);
 
-  // Format the ID for the UI to match the Admin panel
   const displayId = user?.id
     ? `OP-${user.id.slice(-6).toUpperCase()}`
     : "UNKNOWN";
@@ -57,6 +55,30 @@ export default function LiveTranscription() {
     if (timerRef.current) clearInterval(timerRef.current);
   };
 
+  // ==================================================
+  // 🔥 2. Handle Text File Download
+  // ==================================================
+  const handleDownload = () => {
+    if (!fullTranscript) return;
+
+    // Create a Blob containing the text data
+    const blob = new Blob([fullTranscript], { type: "text/plain" });
+
+    // Create a temporary URL for the blob
+    const url = URL.createObjectURL(blob);
+
+    // Create an invisible anchor tag to trigger the download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TRANSCRIPT_${sessionId || "SESSION"}.txt`;
+
+    // Trigger download and clean up
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const startRecording = async () => {
     try {
       if (websocketRef.current?.readyState === WebSocket.OPEN) return;
@@ -66,7 +88,6 @@ export default function LiveTranscription() {
       setRecordingTime(0);
       setStatus("connecting");
 
-      // 🔥 Dynamically construct the WebSocket URL using the environment variable
       const wsUrl = `${WS_BASE_URL}/api/v1/live-transcription/ws/transcribe?token=${token}`;
       const ws = new WebSocket(wsUrl);
 
@@ -75,8 +96,6 @@ export default function LiveTranscription() {
       ws.onopen = async () => {
         try {
           setStatus("connected");
-
-          // 🔥 Send the real raw MongoDB user ID to the backend session
           ws.send(JSON.stringify({ type: "session_start", user_id: user?.id }));
 
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -159,7 +178,6 @@ export default function LiveTranscription() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans selection:bg-orange-500 selection:text-white">
-      {/* Top Nav Bar */}
       <nav className="border-b border-zinc-800 bg-black px-6 py-4 flex justify-between items-center z-10 sticky top-0">
         <div className="flex items-center gap-6">
           <button
@@ -176,7 +194,6 @@ export default function LiveTranscription() {
         </div>
 
         <div className="flex items-center gap-4 text-sm font-mono">
-          {/* 🔥 Dynamically show the actual connected server URL in the UI */}
           <div className="flex items-center gap-2 text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-md border border-zinc-800">
             <Server className="w-4 h-4" /> {WS_BASE_URL}
           </div>
@@ -191,15 +208,11 @@ export default function LiveTranscription() {
         </div>
       </nav>
 
-      {/* Main Content Workspace */}
       <div className="flex-grow p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar: Controls & Metadata */}
         <div className="col-span-1 flex flex-col gap-6">
-          {/* Main Action Card */}
           <div
             className={`p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden ${isRecording ? "bg-zinc-900/80 border-orange-500/40 shadow-[0_0_30px_rgba(234,88,12,0.05)]" : "bg-zinc-900/40 border-zinc-800"}`}
           >
-            {/* Ambient Background Glow when recording */}
             {isRecording && (
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 blur-[50px] rounded-full pointer-events-none"></div>
             )}
@@ -239,7 +252,6 @@ export default function LiveTranscription() {
             </button>
           </div>
 
-          {/* Session Metadata Card */}
           <div className="p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800 flex-grow">
             <h3 className="text-zinc-400 text-xs font-mono uppercase tracking-widest mb-6 flex items-center gap-2">
               <Database className="w-4 h-4" /> System Metadata
@@ -248,7 +260,6 @@ export default function LiveTranscription() {
             <div className="space-y-4 font-mono text-sm">
               <div>
                 <p className="text-zinc-600 text-xs mb-1">USER_ID</p>
-                {/* 🔥 Show the dynamically formatted User ID */}
                 <p className="text-zinc-300 truncate">{displayId}</p>
               </div>
               <div>
@@ -269,9 +280,7 @@ export default function LiveTranscription() {
           </div>
         </div>
 
-        {/* Right Area: Transcripts */}
         <div className="col-span-1 lg:col-span-3 flex flex-col gap-6">
-          {/* Latest Chunk (Live Teleprompter Feel) */}
           <div
             className={`p-6 rounded-2xl border transition-all duration-500 flex items-center min-h-[120px]
             ${latestText ? "bg-orange-500/5 border-orange-500/30" : "bg-zinc-900/40 border-zinc-800"}`}
@@ -288,15 +297,25 @@ export default function LiveTranscription() {
             )}
           </div>
 
-          {/* Full Transcript Output */}
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl flex flex-col flex-grow overflow-hidden relative shadow-inner">
             <div className="bg-zinc-900/80 backdrop-blur-sm px-6 py-4 border-b border-zinc-800 flex justify-between items-center z-10 sticky top-0">
               <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">
                 Master Transcript Log
               </span>
-              <span className="text-xs font-mono text-zinc-600">
-                Auto-scrolling
-              </span>
+
+              {/* 🔥 3. Download Button Added to Header */}
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-mono text-zinc-600">
+                  Auto-scrolling
+                </span>
+                <button
+                  onClick={handleDownload}
+                  disabled={!fullTranscript}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800/50 text-xs font-mono text-white rounded-md transition-colors border border-zinc-700"
+                >
+                  <Download className="w-3 h-3" /> Export .TXT
+                </button>
+              </div>
             </div>
 
             <div className="p-8 flex-grow overflow-y-auto">
@@ -308,7 +327,6 @@ export default function LiveTranscription() {
                   </span>
                 )}
               </p>
-              {/* Blinking cursor effect at the end of the transcript */}
               {isRecording && fullTranscript && (
                 <span className="inline-block w-2.5 h-5 bg-orange-500 ml-2 animate-pulse align-middle"></span>
               )}

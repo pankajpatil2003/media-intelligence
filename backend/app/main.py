@@ -7,8 +7,9 @@ from app.features.live_transcription.websocket.speech import (
 )
 
 # 🔥 Import the Auth and Admin Routers
-from app.routers.auth import router as auth_router
-from app.routers.admin import router as admin_router
+from app.features.auth.auth import router as auth_router
+from app.features.admin.admin import router as admin_router
+from app.features.batch_transcription.router import router as batch_router
 
 # ==================================================
 # 🔥 FastAPI App
@@ -68,6 +69,12 @@ app.include_router(
     admin_router,
     prefix="/api/v1/admin",
     tags=["Admin"]
+)
+
+app.include_router(
+    batch_router, 
+    prefix="/api/v1/transcription", 
+    tags=["Batch Transcription"]
 )
 
 # ==================================================

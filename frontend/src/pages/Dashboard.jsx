@@ -9,11 +9,16 @@ import {
   User,
   Shield,
   LogOut,
+  Database,
+  Search, // 🔥 Added Search Icon
 } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth(); // 🔥 Get user data and logout function
+
+  // 🔥 State for the search bar
+  const [searchQuery, setSearchQuery] = useState("");
 
   const features = [
     {
@@ -22,7 +27,17 @@ export default function Dashboard() {
       description:
         "Real-time, 16kHz float32 audio streaming with hardware-accelerated speech-to-text.",
       icon: <Activity className="w-7 h-7 text-orange-400" />,
-      path: "/transcription",
+      path: "/live-transcription",
+      active: true,
+      tag: "v1.0",
+    },
+    {
+      id: "batch_transcription",
+      title: "Batch Processing",
+      description:
+        "Upload pre-recorded media files (MP3, WAV, MP4) for deep analysis and complete text extraction.",
+      icon: <Database className="w-7 h-7 text-orange-400" />,
+      path: "/batch-transcription",
       active: true,
       tag: "v1.0",
     },
@@ -36,22 +51,19 @@ export default function Dashboard() {
       active: false,
       tag: "Beta",
     },
-    {
-      id: "translation",
-      title: "Live Translation",
-      description:
-        "On-the-fly multi-language translation pipeline with subtitling output.",
-      icon: <FileAudio className="w-7 h-7 text-zinc-600" />,
-      path: "#",
-      active: false,
-      tag: "Dev",
-    },
   ];
+
+  // 🔥 Filter features based on search query (checks title and description)
+  const filteredFeatures = features.filter(
+    (feature) =>
+      feature.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      feature.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="min-h-screen bg-black bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-900/40 via-black to-black p-10 pt-20 text-white">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-16 border-b border-zinc-800/50 pb-8 flex justify-between items-end">
+        <header className="mb-10 border-b border-zinc-800/50 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
             <h2 className="text-4xl font-black text-white tracking-tight">
               SYSTEM <span className="text-orange-500">MODULES</span>
@@ -83,7 +95,7 @@ export default function Dashboard() {
               <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
 
-            {/* 🔥 Terminate Session (Logout) */}
+            {/* Terminate Session (Logout) */}
             <button
               onClick={logout}
               title="Terminate Session"
@@ -94,52 +106,79 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature) => (
-            <div
-              key={feature.id}
-              onClick={() => feature.active && navigate(feature.path)}
-              className={`group relative p-8 rounded-2xl bg-zinc-900/30 backdrop-blur-md border overflow-hidden flex flex-col h-full transition-all duration-500
-                ${
-                  feature.active
-                    ? "border-zinc-700/50 hover:border-orange-500/80 cursor-pointer hover:-translate-y-2 hover:shadow-[0_10px_40px_-10px_rgba(234,88,12,0.3)]"
-                    : "border-zinc-800/30 opacity-50 cursor-not-allowed"
-                }`}
-            >
-              <div
-                className={`absolute top-0 left-0 w-full h-1 ${feature.active ? "bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}
-              ></div>
-
-              <div className="flex justify-between items-start mb-6">
-                <div
-                  className={`p-4 rounded-xl border ${feature.active ? "bg-orange-500/10 border-orange-500/20 shadow-[0_0_15px_rgba(234,88,12,0.2)]" : "bg-zinc-950 border-zinc-800"}`}
-                >
-                  {feature.icon}
-                </div>
-                <span className="font-mono text-xs uppercase tracking-widest px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-zinc-500">
-                  {feature.tag}
-                </span>
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
-                {feature.title}
-              </h3>
-              <p className="text-zinc-400 text-sm leading-relaxed flex-grow mb-8">
-                {feature.description}
-              </p>
-
-              <div className="mt-auto border-t border-zinc-800/50 pt-4 flex items-center justify-between">
-                <span
-                  className={`text-xs font-mono uppercase tracking-widest ${feature.active ? "text-orange-500" : "text-zinc-600"}`}
-                >
-                  {feature.active ? "Initialize Engine" : "Offline"}
-                </span>
-                {feature.active && (
-                  <ChevronRight className="w-5 h-5 text-orange-500 transform group-hover:translate-x-1 transition-transform" />
-                )}
-              </div>
+        {/* 🔥 Search Bar UI */}
+        <div className="mb-8">
+          <div className="relative max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-5 h-5 text-zinc-500" />
             </div>
-          ))}
+            <input
+              type="text"
+              placeholder="Search modules..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-mono text-sm placeholder-zinc-600"
+            />
+          </div>
+        </div>
+
+        {/* Modules Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* 🔥 Display Empty State if no features match the search */}
+          {filteredFeatures.length === 0 ? (
+            <div className="col-span-full py-16 text-center border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+              <Search className="w-8 h-8 text-zinc-600 mx-auto mb-4" />
+              <p className="text-zinc-500 font-mono text-sm uppercase tracking-widest">
+                No modules found matching "{searchQuery}"
+              </p>
+            </div>
+          ) : (
+            filteredFeatures.map((feature) => (
+              <div
+                key={feature.id}
+                onClick={() => feature.active && navigate(feature.path)}
+                className={`group relative p-8 rounded-2xl bg-zinc-900/30 backdrop-blur-md border overflow-hidden flex flex-col h-full transition-all duration-500
+                  ${
+                    feature.active
+                      ? "border-zinc-700/50 hover:border-orange-500/80 cursor-pointer hover:-translate-y-2 hover:shadow-[0_10px_40px_-10px_rgba(234,88,12,0.3)]"
+                      : "border-zinc-800/30 opacity-50 cursor-not-allowed"
+                  }`}
+              >
+                <div
+                  className={`absolute top-0 left-0 w-full h-1 ${feature.active ? "bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}
+                ></div>
+
+                <div className="flex justify-between items-start mb-6">
+                  <div
+                    className={`p-4 rounded-xl border ${feature.active ? "bg-orange-500/10 border-orange-500/20 shadow-[0_0_15px_rgba(234,88,12,0.2)]" : "bg-zinc-950 border-zinc-800"}`}
+                  >
+                    {feature.icon}
+                  </div>
+                  <span className="font-mono text-xs uppercase tracking-widest px-2 py-1 bg-zinc-950 border border-zinc-800 rounded text-zinc-500">
+                    {feature.tag}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-zinc-400 text-sm leading-relaxed flex-grow mb-8">
+                  {feature.description}
+                </p>
+
+                <div className="mt-auto border-t border-zinc-800/50 pt-4 flex items-center justify-between">
+                  <span
+                    className={`text-xs font-mono uppercase tracking-widest ${feature.active ? "text-orange-500" : "text-zinc-600"}`}
+                  >
+                    {feature.active ? "Initialize Engine" : "Offline"}
+                  </span>
+                  {feature.active && (
+                    <ChevronRight className="w-5 h-5 text-orange-500 transform group-hover:translate-x-1 transition-transform" />
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

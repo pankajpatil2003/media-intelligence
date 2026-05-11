@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 
 from app.database.collections import users_collection
-from app.routers.auth import get_current_user
+from app.features.auth.auth import get_current_user
 
 router = APIRouter()
 
